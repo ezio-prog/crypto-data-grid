@@ -2,22 +2,22 @@ name: Continuous Data Feed Engine
 
 on:
   schedule:
-    - cron: '0 * * * *' # Tells GitHub to wake up and run exactly at the start of every hour on autopilot
-  workflow_dispatch: # Gives you a manual button to test it instantly
+    - cron: '0 * * * *' # Triggers every hour perfectly on autopilot
+  workflow_dispatch: # Keeps your manual testing button active
 
 jobs:
   run-harvester:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Grants the server permission to save the data back into your repository folder
+      contents: write # Grants permissions to save files back to your folder
     steps:
     - name: Checkout Repository Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4 # UPGRADED: Clears the Node.js warning
 
     - name: Setup Python Environment
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5 # UPGRADED: Clears the Node.js warning
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - name: Install Scraping Dependencies
       run: pip install requests
@@ -29,8 +29,6 @@ jobs:
       run: |
         git config --global user.name "Data-Bot-Engine"
         git config --global user.email "databot@anonymous.org"
-        
-        # If your main.py writes a file, this saves it. If it prints to logs, it clears safely.
         git add -A
         git commit -m "Automated update: Logged data string [skip ci]" || echo "No changes to save"
         git push

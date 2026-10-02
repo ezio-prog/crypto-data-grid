@@ -13,38 +13,34 @@ def fetch_masked_headers():
     return {"User-Agent": random.choice(user_agents), "Accept": "application/json"}
 
 def process_node_harvest():
-    tokens = "bitcoin,ethereum,solana,ripple,cardano,binancecoin,polkadot,dogecoin,chainlink,avalanche-2"
-    
-    # FIXED FULL PATH URL: Explicitly maps the structural API endpoints cleanly
-    url = f"https://coingecko.com{tokens}&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h"
-    
+    # Direct endpoint for top trending assets globally
+    trending_url = "https://api.coingecko.com/api/v3/search/trending"
     timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    compiled_row = [timestamp]
-    headers_list = ["Timestamp"]
+    row_data = [timestamp]
     
     try:
-        response = requests.get(url, headers=fetch_masked_headers(), timeout=15)
+        response = requests.get(trending_url, headers=fetch_masked_headers(), timeout=12)
         if response.status_code == 200:
-            market_data = response.json()
+            trending_coins = response.json().get('coins', [])
             
-            # Loop through each token payload to harvest dense metrics arrays
-            for coin in market_data:
-                symbol = coin.get('symbol', '').upper()
+            # Select and parse the top 3 trending assets dynamically
+            top_3 = trending_coins[:3]
+            
+            for index, coin in enumerate(top_3):
+                item = coin.get('item', {})
+                name = item.get('name', 'Unknown')
+                symbol = item.get('symbol', 'UNK').upper()
+                rank = item.get('market_cap_rank', 'N/A')
                 
-                compiled_row.extend([
-                    coin.get('current_price'),
-                    coin.get('market_cap'),
-                    coin.get('total_volume'),
-                    coin.get('high_24h'),
-                    coin.get('low_24h'),
-                    coin.get('price_change_percentage_24h'),
-                    coin.get('circulating_supply')
-                ])
+                # Fetch clean structural metrics safely
+                data = item.get('data', {})
+                price = data.get('price', 0.0)
                 
-                headers_list.extend([
-                    f"{symbol}_Price", f"{symbol}_MarketCap", f"{symbol}_Vol24h",
-                    f"{symbol}_High24h", f"{symbol}_Low24h", f"{symbol}_Change24h", f"{symbol}_Supply"
-                ])
+                # If price is inside an HTML tag string fallback, clean it up
+                if isinstance(price, str):
+                    price = price.split('$')[-1].replace(',', '').strip()
+                
+                row_data.extend([name, symbol, rank, price])
                 
             file_name = "crypto_data_feed.csv"
             file_exists = os.path.isfile(file_name)
@@ -52,13 +48,20 @@ def process_node_harvest():
             with open(file_name, 'a', newline='') as file:
                 writer = csv.writer(file)
                 if not file_exists:
-                    writer.writerow(headers_list)
-                writer.writerow(compiled_row)
-            print(f"SUCCESS: Dense data array compiled for {len(market_data)} assets.")
+                    # Initialize clean schema for the top 3 trending metrics positions
+                    writer.writerow([
+                        "Timestamp",
+                        "Trend1_Name", "Trend1_Symbol", "Trend1_Rank", "Trend1_Price",
+                        "Trend2_Name", "Trend2_Symbol", "Trend2_Rank", "Trend2_Price",
+                        "Trend3_Name", "Trend3_Symbol", "Trend3_Rank", "Trend3_Price"
+                    ])
+                writer.writerow(row_data)
+            print("SUCCESS: Dynamic top trending data points appended safely.")
         else:
             print(f"GATEWAY_REJECTION: Status code {response.status_code}")
-    except Exception as e:
-        print(f"HARVEST_CRITICAL_FAIL: {str(e)}")
+            
+    except Exception as network_error:
+        print(f"HARVEST_CRITICAL_FAIL: {str(network_error)}")
 
 if __name__ == "__main__":
     process_node_harvest()

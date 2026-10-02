@@ -9,12 +9,12 @@ jobs:
   run-harvester:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Grants full permissions to write and save files back to your folder
+      contents: write # Grants full permissions to save files back to your folder
     steps:
     - name: Checkout Repository Code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # CRITICAL UPGRADE: Pulls full deep branch history to completely clear Git 128 blocks
+        fetch-depth: 0 # Pulls full deep branch history to completely clear Git blocks
 
     - name: Setup Python Environment
       uses: actions/setup-python@v5
@@ -51,11 +51,4 @@ jobs:
           git push origin HEAD:main
         else
           echo "Working directory clean or API rate limit active. Exiting cleanly!"
-          exit 0
-        fi
-
-          git push origin HEAD:main
-        else
-          echo "No historical variations found. Working tree is clean. Exiting cleanly!"
-          exit 0
         fi

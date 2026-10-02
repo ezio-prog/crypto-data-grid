@@ -2,17 +2,19 @@ name: Continuous Data Feed Engine
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *' # Triggers every hour perfectly on autopilot
+  workflow_dispatch: # Keeps your manual testing button active
 
 jobs:
   run-harvester:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Grants full permissions to write and save files back to your folder
     steps:
     - name: Checkout Repository Code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # CRITICAL UPGRADE: Pulls full deep branch history to completely clear Git 128 blocks
 
     - name: Setup Python Environment
       uses: actions/setup-python@v5
@@ -20,8 +22,7 @@ jobs:
         python-version: '3.11'
 
     - name: Install Scraping Dependencies
-      run: |
-        pip install requests
+      run: pip install requests
 
     - name: Execute Scraper Script
       run: python main.py
@@ -31,16 +32,21 @@ jobs:
         git config --global user.name "Data-Bot-Engine"
         git config --global user.email "databot@anonymous.org"
         
-        # Explicitly stage the CSV file directly instead of relying on parsing status strings
+        # Explicitly fetch changes to ensure local cloud index matches online repository
+        git fetch origin main
+        
+        # Pull down remote changes safely via rebase to fully protect against conflicts
+        git pull --rebase origin main
+        
+        # Force add the file to make sure it tracks updates cleanly 
         git add crypto_data_feed.csv
         
-        # Check if there is an active commit staged to save
+        # Commit if changes exist, exit quietly if already up to date
         if ! git diff --cached --quiet; then
-          echo "New data elements detected. Syncing archive..."
+          echo "New crypto market mutations detected. Syncing archive database..."
           git commit -m "Automated update: Logged data string [skip ci]"
-          git pull --rebase origin main
           git push origin HEAD:main
         else
-          echo "No historical variations found. Exiting cleanly."
+          echo "No historical variations found. Working tree is clean. Exiting cleanly!"
           exit 0
         fi

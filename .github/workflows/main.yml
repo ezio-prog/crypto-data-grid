@@ -2,25 +2,26 @@ name: Continuous Data Feed Engine
 
 on:
   schedule:
-    - cron: '0 * * * *' # Triggers every hour perfectly on autopilot
-  workflow_dispatch: # Keeps your manual testing button active
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   run-harvester:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Grants permissions to save files back to your folder
+      contents: write
     steps:
     - name: Checkout Repository Code
-      uses: actions/checkout@v4 # Clears the Node.js warning
+      uses: actions/checkout@v4
 
     - name: Setup Python Environment
-      uses: actions/setup-python@v5 # Clears the Node.js warning
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
     - name: Install Scraping Dependencies
-      run: pip install requests
+      run: |
+        pip install requests
 
     - name: Execute Scraper Script
       run: python main.py
@@ -30,19 +31,16 @@ jobs:
         git config --global user.name "Data-Bot-Engine"
         git config --global user.email "databot@anonymous.org"
         
-        # Check if the python script actually modified or created the CSV file
-        if [ -n "$(git status --porcelain)" ]; then
-          echo "New data harvesting variations detected. Saving changes..."
-          git add -A
+        # Explicitly stage the CSV file directly instead of relying on parsing status strings
+        git add crypto_data_feed.csv
+        
+        # Check if there is an active commit staged to save
+        if ! git diff --cached --quiet; then
+          echo "New data elements detected. Syncing archive..."
           git commit -m "Automated update: Logged data string [skip ci]"
-          
-          # Pull down remote variations first via rebase to completely prevent conflicts
           git pull --rebase origin main
-          
-          # Force push updates safely to main branch head
           git push origin HEAD:main
         else
-          # If file data hasn't shifted, exit cleanly instead of forcing an empty crash
-          echo "Working tree is clean. No new metrics to compile. Exiting successfully!"
+          echo "No historical variations found. Exiting cleanly."
           exit 0
         fi

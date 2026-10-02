@@ -32,19 +32,19 @@ jobs:
         git config --global user.name "Data-Bot-Engine"
         git config --global user.email "databot@anonymous.org"
         
-        # Explicitly pull remote updates first to keep the branch sync perfect
-        git fetch origin main
-        git pull --rebase origin main
-        
-        # Create an empty file with headers ONLY if the script failed to generate it due to an API block
+        # 1. Fallback: Create an empty file with headers ONLY if it doesn't exist
         if [ ! -f crypto_data_feed.csv ]; then
           echo "Timestamp,Trend1_Name,Trend1_Symbol,Trend1_Rank,Trend1_Price,Trend2_Name,Trend2_Symbol,Trend2_Rank,Trend2_Price,Trend3_Name,Trend3_Symbol,Trend3_Rank,Trend3_Price" > crypto_data_feed.csv
         fi
         
-        # Explicitly track the file safely without generating pathspec errors
+        # 2. Stage the file FIRST so git knows your changes are safe
         git add crypto_data_feed.csv
         
-        # Commit if the script added new rows, otherwise exit cleanly with success
+        # 3. Pull down remote updates using autostash to eliminate merge conflict blocks completely
+        git fetch origin main
+        git pull --rebase --autostash origin main
+        
+        # 4. Check if new data variations exist, then commit and push safely
         if ! git diff --cached --quiet; then
           echo "New dynamic trending data logs detected. Saving..."
           git commit -m "Automated update: Logged data string [skip ci]"

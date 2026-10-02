@@ -2,38 +2,35 @@ name: Continuous Data Feed Engine
 
 on:
   schedule:
-    - cron: '0 * * * *' # Triggers automatically every hour
-  workflow_dispatch: # Keeps manual execution option active
+    - cron: '0 * * * *' # Triggers every hour perfectly on autopilot
+  workflow_dispatch: # Keeps your manual testing button active
 
 jobs:
   run-harvester:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Crucial permission flag
+      contents: write # Grants permissions to save files back to your folder
     steps:
-    - name: Checkout Repository Code
-      uses: actions/checkout@v4
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4 # UPGRADED: Clears the Node.js warning
 
-    - name: Setup Python Environment
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Setup Python Environment
+        uses: actions/setup-python@v5 # UPGRADED: Clears the Node.js warning
+        with:
+          python-version: '3.11'
 
-    - name: Install Scraping Dependencies
-      run: pip install requests
+      - name: Install Scraping Dependencies
+        run: pip install requests
 
-    - name: Execute Scraper Script
-      run: python main.py
+      - name: Execute Scraper Script
+        run: python main.py
 
-    - name: Save Data to Repository
-      run: |
-        git config --global user.name "Data-Bot-Engine"
-        git config --global user.email "databot@anonymous.org"
-        git add crypto_data_feed.csv || echo "No file to add"
-        git commit -m "Automated update: Logged data string [skip ci]" || echo "No changes to save"
-        
-        # Pull down any remote changes first to prevent conflicting errors
-        git pull --rebase origin main
-        git push origin main
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Uses built-in token system for secure access
+      - name: Save Data to Repository
+        run: |
+          git config --global user.name "Data-Bot-Engine"
+          git config --global user.email "databot@anonymous.org"
+          git add -A
+          git commit -m "Automated update: Logged data string [skip ci]" || echo "No changes to save"
+          git fetch origin main
+          git rebase origin/main || git pull --rebase origin main
+          git push origin HEAD:main

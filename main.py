@@ -13,10 +13,9 @@ def fetch_masked_headers():
     return {"User-Agent": random.choice(user_agents), "Accept": "application/json"}
 
 def process_node_harvest():
-    # Target strings for the top 10 high-value network assets
     tokens = "bitcoin,ethereum,solana,ripple,cardano,binancecoin,polkadot,dogecoin,chainlink,avalanche-2"
     
-    # Advanced API endpoint to extract deep institutional parameters
+    # FIXED FULL PATH URL: Explicitly maps the structural API endpoints cleanly
     url = f"https://coingecko.com{tokens}&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h"
     
     timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -32,7 +31,6 @@ def process_node_harvest():
             for coin in market_data:
                 symbol = coin.get('symbol', '').upper()
                 
-                # Appends 7 distinct variables per coin into a single line row array
                 compiled_row.extend([
                     coin.get('current_price'),
                     coin.get('market_cap'),
@@ -43,7 +41,6 @@ def process_node_harvest():
                     coin.get('circulating_supply')
                 ])
                 
-                # Generates tracking headers dynamically during the first run
                 headers_list.extend([
                     f"{symbol}_Price", f"{symbol}_MarketCap", f"{symbol}_Vol24h",
                     f"{symbol}_High24h", f"{symbol}_Low24h", f"{symbol}_Change24h", f"{symbol}_Supply"
@@ -52,7 +49,6 @@ def process_node_harvest():
             file_name = "crypto_data_feed.csv"
             file_exists = os.path.isfile(file_name)
             
-            # Write structured parameters directly to your spreadsheet file
             with open(file_name, 'a', newline='') as file:
                 writer = csv.writer(file)
                 if not file_exists:

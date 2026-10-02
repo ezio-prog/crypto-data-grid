@@ -2,20 +2,20 @@ name: Continuous Data Feed Engine
 
 on:
   schedule:
-    - cron: '0 * * * *' # Triggers every hour perfectly on autopilot
-  workflow_dispatch: # Keeps your manual testing button active
+    - cron: '0 * * * *' # Triggers automatically every hour
+  workflow_dispatch: # Keeps manual execution option active
 
 jobs:
   run-harvester:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Grants permissions to save files back to your folder
+      contents: write # Crucial permission flag
     steps:
     - name: Checkout Repository Code
-      uses: actions/checkout@v4 # UPGRADED: Clears the Node.js warning
+      uses: actions/checkout@v4
 
     - name: Setup Python Environment
-      uses: actions/setup-python@v5 # UPGRADED: Clears the Node.js warning
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
@@ -29,6 +29,11 @@ jobs:
       run: |
         git config --global user.name "Data-Bot-Engine"
         git config --global user.email "databot@anonymous.org"
-        git add -A
+        git add crypto_data_feed.csv || echo "No file to add"
         git commit -m "Automated update: Logged data string [skip ci]" || echo "No changes to save"
-        git push
+        
+        # Pull down any remote changes first to prevent conflicting errors
+        git pull --rebase origin main
+        git push origin main
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Uses built-in token system for secure access

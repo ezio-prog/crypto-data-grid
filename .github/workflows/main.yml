@@ -2,20 +2,23 @@ name: Continuous Data Feed Engine
 
 on:
   schedule:
-    - cron: '0 * * * *' # Triggers every hour perfectly on autopilot
-  workflow_dispatch: # Keeps your manual testing button active
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   run-harvester:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Grants permissions to save files back to your folder
+      contents: write
+
     steps:
       - name: Checkout Repository Code
-        uses: actions/checkout@v4 # UPGRADED: Clears the Node.js warning
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python Environment
-        uses: actions/setup-python@v5 # UPGRADED: Clears the Node.js warning
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -31,6 +34,5 @@ jobs:
           git config --global user.email "databot@anonymous.org"
           git add -A
           git commit -m "Automated update: Logged data string [skip ci]" || echo "No changes to save"
-          git fetch origin main
-          git rebase origin/main || git pull --rebase origin main
-          git push origin HEAD:main
+          git pull --rebase origin main
+          git push origin main

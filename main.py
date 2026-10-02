@@ -14,7 +14,8 @@ def fetch_masked_headers():
 
 def process_node_harvest():
     tokens = "bitcoin,ethereum,solana,ripple,cardano,binancecoin,polkadot,dogecoin,chainlink,avalanche-2"
-    primary_url = f"https://coingecko.com{tokens}&vs_currencies=usd&include_24hr_vol=true&include_24hr_change=true"
+    # FIXED: Proper URL construction with query parameters
+    primary_url = f"https://api.coingecko.com/api/v3/simple/price?ids={tokens}&vs_currencies=usd&include_24hr_vol=true&include_24hr_change=true"
     
     timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
     row_data = None
@@ -40,9 +41,9 @@ def process_node_harvest():
             
     except Exception as network_error:
         print(f"PRIMARY_FAILED: {str(network_error)}. Swapping to fail-safe...")
-        # FIXED FAIL-SAFE ENGINE: Using direct, clean query parameters for Binance API
+        # FIXED: Proper Binance API endpoint with query parameters
         try:
-            backup_url = "https://binance.com"
+            backup_url = "https://api.binance.com/api/v3/ticker/price?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22]"
             backup_response = requests.get(backup_url, headers=fetch_masked_headers(), timeout=10)
             if backup_response.status_code == 200:
                 prices = {item['symbol']: float(item['price']) for item in backup_response.json() if item['symbol'] in ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']}

@@ -32,19 +32,28 @@ jobs:
         git config --global user.name "Data-Bot-Engine"
         git config --global user.email "databot@anonymous.org"
         
-        # Explicitly fetch changes to ensure local cloud index matches online repository
+        # Explicitly pull remote updates first to keep the branch sync perfect
         git fetch origin main
-        
-        # Pull down remote changes safely via rebase to fully protect against conflicts
         git pull --rebase origin main
         
-        # Force add the file to make sure it tracks updates cleanly 
+        # Create an empty file with headers ONLY if the script failed to generate it due to an API block
+        if [ ! -f crypto_data_feed.csv ]; then
+          echo "Timestamp,Trend1_Name,Trend1_Symbol,Trend1_Rank,Trend1_Price,Trend2_Name,Trend2_Symbol,Trend2_Rank,Trend2_Price,Trend3_Name,Trend3_Symbol,Trend3_Rank,Trend3_Price" > crypto_data_feed.csv
+        fi
+        
+        # Explicitly track the file safely without generating pathspec errors
         git add crypto_data_feed.csv
         
-        # Commit if changes exist, exit quietly if already up to date
+        # Commit if the script added new rows, otherwise exit cleanly with success
         if ! git diff --cached --quiet; then
-          echo "New crypto market mutations detected. Syncing archive database..."
+          echo "New dynamic trending data logs detected. Saving..."
           git commit -m "Automated update: Logged data string [skip ci]"
+          git push origin HEAD:main
+        else
+          echo "Working directory clean or API rate limit active. Exiting cleanly!"
+          exit 0
+        fi
+
           git push origin HEAD:main
         else
           echo "No historical variations found. Working tree is clean. Exiting cleanly!"

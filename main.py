@@ -17,47 +17,61 @@ def process_node_harvest():
     primary_url = f"https://coingecko.com{tokens}&vs_currencies=usd&include_24hr_vol=true&include_24hr_change=true"
     
     timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    row_data = None
     
     try:
+        # Attempt Primary Data Fetch
         response = requests.get(primary_url, headers=fetch_masked_headers(), timeout=12)
         if response.status_code == 200:
             raw_data = response.json()
-            
-            # Extract tracking variables
             btc = raw_data.get('bitcoin', {})
             eth = raw_data.get('ethereum', {})
             sol = raw_data.get('solana', {})
             
-            # Format row array for the spreadsheet
             row_data = [
                 timestamp,
                 btc.get('usd'), btc.get('usd_24h_vol'), btc.get('usd_24h_change'),
                 eth.get('usd'), eth.get('usd_24h_vol'), eth.get('usd_24h_change'),
                 sol.get('usd'), sol.get('usd_24h_vol'), sol.get('usd_24h_change')
             ]
-            
-            # Check if file already exists so we know whether to print column headers
-            file_name = "crypto_data_feed.csv"
-            file_exists = os.path.isfile(file_name)
-            
-            with open(file_name, 'a', newline='') as file:
-                writer = csv.writer(file)
-                if not file_exists:
-                    # Initialize column titles on cycle #1
-                    writer.writerow([
-                        "Timestamp", 
-                        "BTC_Price", "BTC_Vol_24h", "BTC_Change_24h",
-                        "ETH_Price", "ETH_Vol_24h", "ETH_Change_24h",
-                        "SOL_Price", "SOL_Vol_24h", "SOL_Change_24h"
-                    ])
-                writer.writerow(row_data)
-                
-            print("SUCCESS: Data compiled and written to crypto_data_feed.csv")
+            print("PRIMARY_ENGINE_SUCCESS: Data parsed.")
         else:
-            raise Exception(f"Primary API returned filter status: {response.status_code}")
+            raise Exception(f"Primary error status code: {response.status_code}")
             
     except Exception as network_error:
-        print(f"CYCLE_ERROR: {str(network_error)}")
+        print(f"PRIMARY_FAILED: {str(network_error)}. Swapping to fail-safe...")
+        # FIXED FAIL-SAFE ENGINE: Using direct, clean query parameters for Binance API
+        try:
+            backup_url = "https://binance.com"
+            backup_response = requests.get(backup_url, headers=fetch_masked_headers(), timeout=10)
+            if backup_response.status_code == 200:
+                prices = {item['symbol']: float(item['price']) for item in backup_response.json() if item['symbol'] in ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']}
+                
+                row_data = [
+                    timestamp,
+                    prices.get('BTCUSDT'), 0.0, 0.0,
+                    prices.get('ETHUSDT'), 0.0, 0.0,
+                    prices.get('SOLUSDT'), 0.0, 0.0
+                ]
+                print("FAIL_SAFE_ENGINE_SUCCESS: Backup data parsed.")
+        except Exception as critical_fault:
+            print(f"CRITICAL_OFFLINE_FAIL: {str(critical_fault)}")
+
+    # Write data row to file if successfully collected from either source
+    if row_data:
+        file_name = "crypto_data_feed.csv"
+        file_exists = os.path.isfile(file_name)
+        with open(file_name, 'a', newline='') as file:
+            writer = csv.writer(file)
+            if not file_exists:
+                writer.writerow([
+                    "Timestamp", 
+                    "BTC_Price", "BTC_Vol_24h", "BTC_Change_24h",
+                    "ETH_Price", "ETH_Vol_24h", "ETH_Change_24h",
+                    "SOL_Price", "SOL_Vol_24h", "SOL_Change_24h"
+                ])
+            writer.writerow(row_data)
+        print("SUCCESS: Data file updated securely.")
 
 if __name__ == "__main__":
     process_node_harvest()
